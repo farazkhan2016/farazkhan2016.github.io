@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>English Living Dictionary</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: #eef2f7;
+    margin: 0; padding: 15px;
+  }
+  h1 { text-align: center; color: #333; margin-bottom: 20px; font-size: 28px; }
+  .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
+  input, textarea { width: 100%; padding: 12px; margin-top: 10px; font-size: 16px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; outline:none;}
+  textarea { resize: vertical;}
+  button { margin-top:12px; width: 100%; padding: 12px; font-size:16px; color:white; background:#4CAF50; border:none; border-radius:10px; cursor:pointer; transition:0.2s;}
+  button:hover { background:#45a049; }
+  .entry { border-bottom:1px solid #ddd; padding:10px 0; display:flex; flex-direction:column; }
+  .entry strong { font-size: 18px; margin-bottom:4px; }
+  .delete { background:#e74c3c; margin-top:8px; width:120px; align-self:flex-start; border-radius:8px; }
+  #search { padding:12px; font-size:16px; border-radius:10px; border:1px solid #ccc; width:100%; box-sizing:border-box;}
+  .word-of-day { background:#f0fff0; border-left:5px solid #4CAF50; padding:10px; margin-bottom:15px; border-radius:8px;}
+  @media(max-width:500px){ .card{padding:15px;} h1{font-size:24px;} }
+</style>
+</head>
+<body>
+
+<h1>📘 English Living Dictionary</h1>
+
+<div class="card word-of-day" id="wordOfDay">
+  <strong>Word of the Day:</strong>
+  <span id="dailyWord">Loading...</span>
+  <button onclick="speakWord()">🔊 Pronounce</button>
+</div>
+
+<div class="card">
+  <h2>Add a Word</h2>
+  <input id="word" placeholder="Word">
+  <input id="meaning" placeholder="Meaning">
+  <textarea id="example" placeholder="Example sentence (optional)"></textarea>
+  <button onclick="addWord()">Add Word</button>
+</div>
+
+<div class="card">
+  <input id="search" placeholder="Search..." oninput="render()">
+</div>
+
+<div class="card">
+  <h2>Dictionary</h2>
+  <div id="list"></div>
+</div>
+
+<script>
+let words = JSON.parse(localStorage.getItem("words")) || [];
+
+function saveWords(){ localStorage.setItem("words", JSON.stringify(words)); }
+
+function addWord(){
+  const word = document.getElementById("word").value.trim();
+  const meaning = document.getElementById("meaning").value.trim();
+  const example = document.getElementById("example").value.trim();
+  if(!word||!meaning){ alert("Please enter a word and its meaning."); return; }
+  if(words.some(w=>w.word.toLowerCase()===word.toLowerCase())){ alert("This word already exists."); return; }
+  words.push({word,meaning,example});
+  words.sort((a,b)=>a.word.localeCompare(b.word));
+  saveWords();
+  document.getElementById("word").value=""; document.getElementById("meaning").value=""; document.getElementById("example").value="";
+  render(); setWordOfDay();
+}
+
+function deleteWord(wordToDelete){
+  words = words.filter(w=>w.word!==wordToDelete);
+  saveWords(); render(); setWordOfDay();
+}
+
+function render(){
+  const search = document.getElementById("search").value.toLowerCase();
+  const list = document.getElementById("list"); list.innerHTML="";
+  words.forEach(w=>{
+    if(w.word.toLowerCase().includes(search)){
+      const div=document.createElement("div");
+      div.className="entry";
+      div.innerHTML=`<strong>${w.word}</strong> Meaning: ${w.meaning}<br>Example: ${w.example||"—"}`;
+      const btn=document.createElement("button");
+      btn.textContent="Delete"; btn.className="delete"; btn.onclick=()=>deleteWord(w.word);
+      div.appendChild(btn); list.appendChild(div);
+    }
+  });
+}
+
+function setWordOfDay(){
+  if(words.length===0){ document.getElementById("dailyWord").textContent="No words yet!"; return; }
+  const index = Math.floor(Date.now()/86400000)%words.length;
+  document.getElementById("dailyWord").textContent=`${words[index].word} — ${words[index].meaning}`;
+}
+
+function speakWord(){
+  const text = document.getElementById("dailyWord").textContent.split(" — ")[0];
+  if('speechSynthesis' in window){ const msg=new SpeechSynthesisUtterance(text); window.speechSynthesis.speak(msg); }
+}
+
+render(); setWordOfDay();
+
+if('serviceWorker' in navigator){ navigator.serviceWorker.register("service-worker.js"); }
+</script>
+
+</body>
+</html>
